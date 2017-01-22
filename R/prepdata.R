@@ -3,7 +3,7 @@ theme_set(theme_bw())
 
 #read all csvs
 
-years <- 2010:2015
+years <- 2010:2016
 file_1 <- 'Beijing_'
 file_2 <- '_Hourly.csv'
 
@@ -22,12 +22,11 @@ air_q_all <- rbind(air_q_2010,
                    air_q_2012,
                    air_q_2013,
                    air_q_2014,
-                   air_q_2015)
+                   air_q_2015,
+                   air_q_2016)
 
 #remove missing data
 table(air_q_all$QC.Name)
-# Missing   Valid 
-# 2155   50429 
 
 air_q_all <- subset(air_q_all, QC.Name != 'Missing')
 
