@@ -1,5 +1,6 @@
 library(tidyverse)
 theme_set(theme_bw())
+library(lubridate)
 
 #read all csvs
 
@@ -15,6 +16,7 @@ for(yr in years){
                   na.strings = -999))
 }
 
+
 #rbind data together
 
 air_q_all <- rbind(air_q_2010,
@@ -23,7 +25,11 @@ air_q_all <- rbind(air_q_2010,
                    air_q_2013,
                    air_q_2014,
                    air_q_2015,
-                   air_q_2016)
+                   air_q_2016) %>%
+  mutate(ShortDate = ifelse(Year %in% 2015:2016, 
+                            as.Date(Date..LST., '%m/%d/%Y'),
+                            as.Date(Date..LST., '%Y-%m-%d')),
+         Week = week(as.Date(ShortDate, origin = '1970-01-01')))
 
 #remove missing data
 table(air_q_all$QC.Name)
@@ -47,3 +53,18 @@ air_q_all %>%
             Upper50 = quantile(Value, .75)) %>%
   ungroup() %>%
   mutate(Date = as.Date(paste0(Year, '-', Month, '-', Day))) -> air_q_all.byday
+
+#group by year and week
+air_q_all %>%
+  group_by(Year, Week) %>%
+  summarise(AvgPollution = mean(Value), 
+            MedPollution = median(Value),
+            SDPollution = sd(Value),
+            Lower95 = quantile(Value, .025),
+            Upper95 = quantile(Value, .975),
+            Lower90 = quantile(Value, .05),
+            Upper90 = quantile(Value, .10),
+            Lower50 = quantile(Value, .25),
+            Upper50 = quantile(Value, .75)) -> air_q_all.byweek
+
+
