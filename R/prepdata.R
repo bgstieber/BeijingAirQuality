@@ -2,6 +2,14 @@ library(tidyverse)
 theme_set(theme_bw())
 library(lubridate)
 
+code_hours <- function(x){
+  ifelse(x <= 3, '0-3',
+         ifelse(x <= 7, '4-7',
+                ifelse(x <= 11, '8-11',
+                       ifelse(x <= 15, '12-15',
+                              ifelse(x <= 19, '16-19', '20-23')))))
+}
+
 #read all csvs
 
 years <- 2010:2016
@@ -29,7 +37,8 @@ air_q_all <- rbind(air_q_2010,
   mutate(ShortDate = ifelse(Year %in% 2015:2016, 
                             as.Date(Date..LST., '%m/%d/%Y'),
                             as.Date(Date..LST., '%Y-%m-%d')),
-         Week = week(as.Date(ShortDate, origin = '1970-01-01')))
+         Week = week(as.Date(ShortDate, origin = '1970-01-01')),
+         Hour_Bin = code_hours(Hour))
 
 #remove missing data
 table(air_q_all$QC.Name)
@@ -45,6 +54,8 @@ air_q_all %>%
   summarise(AvgPollution = mean(Value), 
             MedPollution = median(Value),
             SDPollution = sd(Value),
+            Max = max(Value),
+            Min = min(Value),
             Lower95 = quantile(Value, .025),
             Upper95 = quantile(Value, .975),
             Lower90 = quantile(Value, .05),
@@ -60,6 +71,8 @@ air_q_all %>%
   summarise(AvgPollution = mean(Value), 
             MedPollution = median(Value),
             SDPollution = sd(Value),
+            Max = max(Value),
+            Min = min(Value),
             Lower95 = quantile(Value, .025),
             Upper95 = quantile(Value, .975),
             Lower90 = quantile(Value, .05),
