@@ -1,13 +1,17 @@
 library(tidyverse)
 theme_set(theme_bw())
 library(lubridate)
+library(scales)
 
 code_hours <- function(x){
-  ifelse(x <= 3, '0-3',
+  xnew <- 
+    ifelse(x <= 3, '0-3',
          ifelse(x <= 7, '4-7',
                 ifelse(x <= 11, '8-11',
                        ifelse(x <= 15, '12-15',
                               ifelse(x <= 19, '16-19', '20-23')))))
+  
+  factor(xnew, levels = c('0-3','4-7','8-11','12-15','16-19','20-23'))
 }
 
 #read all csvs
@@ -34,11 +38,13 @@ air_q_all <- rbind(air_q_2010,
                    air_q_2014,
                    air_q_2015,
                    air_q_2016) %>%
+  filter(Value > 0) %>%
   mutate(ShortDate = ifelse(Year %in% 2015:2016, 
                             as.Date(Date..LST., '%m/%d/%Y'),
                             as.Date(Date..LST., '%Y-%m-%d')),
          Week = week(as.Date(ShortDate, origin = '1970-01-01')),
-         Hour_Bin = code_hours(Hour))
+         Hour_Bin = code_hours(Hour),
+         DayOfYear = yday(as.Date(ShortDate, origin = '1970-01-01')))
 
 #remove missing data
 table(air_q_all$QC.Name)
@@ -50,7 +56,7 @@ air_q_all <- subset(air_q_all, QC.Name != 'Missing')
 #avg, median, 2.5% q, 97.5% q, 5% q, 95% q, sd
 
 air_q_all %>%
-  group_by(Year, Month, Day) %>%
+  group_by(Year, Month, Day, DayOfYear) %>%
   summarise(AvgPollution = mean(Value), 
             MedPollution = median(Value),
             SDPollution = sd(Value),
