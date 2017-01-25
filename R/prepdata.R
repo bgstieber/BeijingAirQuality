@@ -50,7 +50,8 @@ air_q_all <- rbind(air_q_2010,
 #remove missing data
 table(air_q_all$QC.Name)
 
-air_q_all <- subset(air_q_all, QC.Name != 'Missing')
+air_q_all <- subset(air_q_all, QC.Name != 'Missing') %>%
+  filter(Year != 2010)
 
 #summarise the data
 #grouping by year, month, and day, calculate:
