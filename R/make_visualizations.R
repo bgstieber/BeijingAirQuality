@@ -1,4 +1,15 @@
-source('prepdata.R')
+source('R/prepdata.R')
+
+pm_label <- function(log2 = FALSE){
+  if(log2){
+    expression(paste('3 Day Rolling Average of  ',
+                     PM[2.5],'  Concentration (',
+                     log[2], ' scale)'))
+  }else{
+    expression(paste('3 Day Rolling Average of  ',
+                     PM[2.5],'  Concentration'))
+  }
+}
 
 # longer time series plot using rolling average
 
@@ -32,23 +43,28 @@ ggplot(air_q_all.byday, aes(x = RollingAvg))+
   scale_colour_brewer(palette = 'Set1',
                       name = 'Data Type')
 
-#density plots comparing all data to months in facet
+#violin plots comparing all data to months in facet
 
 ggplot(air_q_all.byday, aes(x = Month, y = RollingAvg))+
   geom_violin(aes(group = Month),
               draw_quantiles = c(.25, .5, .75))+
   scale_y_continuous(trans = log_trans(2))+
-  facet_wrap(~Year)
+  facet_wrap(~Year)+
+  ylab(pm_label(log2 = T))+
+  scale_x_continuous(breaks = c(1,seq(3, 12, by = 3)))+
+  ggtitle(expression(paste(
+    'Violin Plots of ', PM[2.5], ' Concentration by Month'
+  )))
 
 
-ggplot(air_q_all.byday, aes(x = RollingAvg))+
-  geom_density(data = transform(air_q_all.byday, Month = NULL), 
-               aes(colour = 'All Data'), bw = 'SJ')+
-  geom_density(aes(colour = 'Month in Facet'), bw = 'SJ')+
-  facet_wrap(~Month)+
-  xlab(expression(paste('3 Day Rolling Average of  ',
-                        PM[2.5],'  Concentration (',
-                        log[2], ' scale)')))+
-  scale_x_continuous(trans = log_trans(2))+
-  scale_colour_brewer(palette = 'Set1',
-                      name = 'Data Type')
+# ggplot(air_q_all.byday, aes(x = RollingAvg))+
+#   geom_density(data = transform(air_q_all.byday, Month = NULL), 
+#                aes(colour = 'All Data'), bw = 'SJ')+
+#   geom_density(aes(colour = 'Month in Facet'), bw = 'SJ')+
+#   facet_wrap(~Month)+
+#   xlab(expression(paste('3 Day Rolling Average of  ',
+#                         PM[2.5],'  Concentration (',
+#                         log[2], ' scale)')))+
+#   scale_x_continuous(trans = log_trans(2))+
+#   scale_colour_brewer(palette = 'Set1',
+#                       name = 'Data Type')
