@@ -2,6 +2,7 @@ library(tidyverse)
 theme_set(theme_bw())
 library(lubridate)
 library(scales)
+library(zoo)
 
 code_hours <- function(x){
   xnew <- 
@@ -69,7 +70,9 @@ air_q_all %>%
             Lower50 = quantile(Value, .25),
             Upper50 = quantile(Value, .75)) %>%
   ungroup() %>%
-  mutate(Date = as.Date(paste0(Year, '-', Month, '-', Day))) -> air_q_all.byday
+  mutate(Date = as.Date(paste0(Year, '-', Month, '-', Day))) %>%
+  arrange(Date) %>%
+  mutate(RollingAvg = rollmean(AvgPollution, k = 7, fill = NA)) -> air_q_all.byday
 
 #group by year and week
 air_q_all %>%
