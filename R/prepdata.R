@@ -85,10 +85,23 @@ weather_data <- read.csv('Data/BeijingWeatherData11_16.csv',
          Day = day(CST),
          Events = ifelse(Events == '', 'Clear', Events))
 
+#merge weather data to pm2.5 data
 air_q_all.byday <- merge(x = air_q_all.byday, y = weather_data,
                          by.x = c('Year','Month','Day'),
                          by.y = c('Year','Month','Day'),
                          all.x = TRUE)
+
+#add rolling averages for temp, humidity, wind speed
+
+air_q_all.byday <- air_q_all.byday %>%
+  arrange(Date) %>%
+  mutate(MeanTempF_RollingAvg = rollmean(MeanTemperatureF,
+                                         k = 7, fill = NA),
+         MeanHumid_RollingAvg = rollmean(MeanHumidity,
+                                         k = 7, fill = NA),
+         MeanWindSpeed_RollingAvg = rollmean(MeanWindSpeedMPH,
+                                             k = 7, fill = NA))
+
 
 #group by year and week
 air_q_all %>%
