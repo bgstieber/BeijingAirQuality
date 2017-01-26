@@ -75,6 +75,21 @@ air_q_all %>%
   arrange(Date) %>%
   mutate(RollingAvg = rollmean(AvgPollution, k = 7, fill = NA)) -> air_q_all.byday
 
+#grab weather data
+
+weather_data <- read.csv('Data/BeijingWeatherData11_16.csv', 
+                         stringsAsFactors = FALSE) %>%
+  select(CST, MeanTemperatureF, MeanHumidity, MeanWindSpeedMPH, Events) %>%
+  mutate(Year = year(CST),
+         Month = month(CST),
+         Day = day(CST),
+         Events = ifelse(Events == '', 'Clear', Events))
+
+air_q_all.byday <- merge(x = air_q_all.byday, y = weather_data,
+                         by.x = c('Year','Month','Day'),
+                         by.y = c('Year','Month','Day'),
+                         all.x = TRUE)
+
 #group by year and week
 air_q_all %>%
   group_by(Year, Week) %>%
