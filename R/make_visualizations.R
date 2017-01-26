@@ -15,8 +15,7 @@ pm_label <- function(log2 = FALSE){
 
 ggplot(air_q_all.byday, aes(x = Date, y = RollingAvg))+
   geom_point()+
-  ylab(expression(paste('3 Day Rolling Average of  ',
-                        PM[2.5],'  Concentration')))+
+  ylab(pm_label())+
   ggtitle(expression(
     paste('Beijing Air Quality: Daily ',
           PM[2.5],
@@ -36,9 +35,7 @@ ggplot(air_q_all.byday, aes(x = RollingAvg))+
                aes(colour = 'All Data'), bw = 'SJ')+
   geom_density(aes(colour = 'Year in Facet'), bw = 'SJ')+
   facet_wrap(~Year)+
-  xlab(expression(paste('3 Day Rolling Average of  ',
-                        PM[2.5],'  Concentration (',
-                        log[2], ' scale)')))+
+  xlab(pm_label(log2 = TRUE))+
   scale_x_continuous(trans = log_trans(2))+
   scale_colour_brewer(palette = 'Set1',
                       name = 'Data Type')
@@ -68,3 +65,13 @@ ggplot(air_q_all.byday, aes(x = Month, y = RollingAvg))+
 #   scale_x_continuous(trans = log_trans(2))+
 #   scale_colour_brewer(palette = 'Set1',
 #                       name = 'Data Type')
+
+##look at wind speed now
+
+ggplot(air_q_all.byday, aes(x = MeanWindSpeedMPH, y = AvgPollution))+
+  geom_boxplot(aes(group = MeanWindSpeedMPH))+
+  geom_jitter(alpha = .1, colour = 'dodgerblue2')+
+  scale_y_continuous(trans = log_trans(2))+
+  facet_wrap(~Year)+
+  ylab(pm_label(log2 = TRUE))+
+  xlab('Average Daily Wind Speed (mph)')
