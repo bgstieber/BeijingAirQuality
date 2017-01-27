@@ -51,7 +51,9 @@ ggplot(air_q_all.byday, aes(x = Month, y = RollingAvg))+
   scale_x_continuous(breaks = c(1,seq(3, 12, by = 3)))+
   ggtitle(expression(paste(
     'Violin Plots of ', PM[2.5], ' Concentration by Month'
-  )))
+  )))+
+  stat_summary(fun.y = 'mean', geom = 'point', size = 3, 
+               colour = 'dodgerblue3')
 
 
 # ggplot(air_q_all.byday, aes(x = RollingAvg))+
