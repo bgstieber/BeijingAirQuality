@@ -103,6 +103,26 @@ air_q_all.byday <- air_q_all.byday %>%
                                              k = 7, fill = NA))
 
 
+#investigate other rolling averages
+rolling_avg_dat <- 
+  do.call('rbind', 
+lapply(seq(5, 21, by = 2), 
+       FUN = function(k){
+          air_q_all.byday %>%
+          select(Date, AvgPollution, MeanHumidity,
+          MeanWindSpeedMPH, MeanTemperatureF) %>%
+          arrange(Date) %>%
+          mutate(
+            Pollution = rollmean(AvgPollution, k = k, fill = NA),
+            Humidity = rollmean(MeanHumidity, k = k, fill = NA),
+            WindSpeed = rollmean(MeanWindSpeedMPH, k = k, fill = NA),
+            Temperature = rollmean(MeanTemperatureF, k = k, fill = NA),
+            RollWindow = k)
+         }
+       )
+)
+
+
 #group by year and week
 air_q_all %>%
   group_by(Year, Week) %>%
