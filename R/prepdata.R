@@ -69,7 +69,8 @@ air_q_all %>%
             Lower90 = quantile(Value, .05),
             Upper90 = quantile(Value, .10),
             Lower50 = quantile(Value, .25),
-            Upper50 = quantile(Value, .75)) %>%
+            Upper50 = quantile(Value, .75),
+            Observations = n()) %>%
   ungroup() %>%
   mutate(Date = as.Date(paste0(Year, '-', Month, '-', Day))) %>%
   arrange(Date) %>%
@@ -109,8 +110,9 @@ rolling_avg_dat <-
 lapply(seq(5, 21, by = 2), 
        FUN = function(k){
           air_q_all.byday %>%
-          select(Date, AvgPollution, MeanHumidity,
-          MeanWindSpeedMPH, MeanTemperatureF) %>%
+          select(Date, Year, Month, Day, 
+                 AvgPollution, MeanHumidity,
+                 MeanWindSpeedMPH, MeanTemperatureF) %>%
           arrange(Date) %>%
           mutate(
             Pollution = rollmean(AvgPollution, k = k, fill = NA),
@@ -136,6 +138,7 @@ air_q_all %>%
             Lower90 = quantile(Value, .05),
             Upper90 = quantile(Value, .10),
             Lower50 = quantile(Value, .25),
-            Upper50 = quantile(Value, .75)) -> air_q_all.byweek
+            Upper50 = quantile(Value, .75),
+            Observations = n()) -> air_q_all.byweek
 
 
