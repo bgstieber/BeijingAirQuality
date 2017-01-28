@@ -1,4 +1,12 @@
-source('R/prepdata.R')
+suppress <- TRUE
+
+if(suppress){
+  suppressPackageStartupMessages(source('R/prepdata.R'))  
+}else{
+  source('R/prepdata.R')
+}
+
+
 
 pm_label <- function(log2 = FALSE){
   if(log2){
