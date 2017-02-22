@@ -80,7 +80,14 @@ air_q_all %>%
 
 weather_data <- read.csv('Data/BeijingWeatherData11_16.csv', 
                          stringsAsFactors = FALSE) %>%
-  select(CST, MeanTemperatureF, MeanHumidity, MeanWindSpeedMPH, Events) %>%
+  select(CST, 
+         MaxTemperatureF, MaxHumidity, MaxWindSpeedMPH,
+         MaxSeaLevelPressureIn,
+         MeanTemperatureF, MeanHumidity, MeanWindSpeedMPH, 
+         MeanSeaLevelPressureIn,
+         MinTemperatureF, MinHumidity, MinSeaLevelPressureIn,
+         MaxGustSpeedMPH, PrecipitationIn,
+         Events) %>%
   mutate(Year = year(CST),
          Month = month(CST),
          Day = day(CST),
