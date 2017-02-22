@@ -21,7 +21,7 @@ pm_label <- function(log2 = FALSE){
 
 # longer time series plot using rolling average
 
-ggplot(air_q_all.byday, aes(x = Date, y = RollingAvg))+
+ggplot(air_q_all.byday, aes(x = Date, y = RollingAvgPollution))+
   geom_point()+
   ylab(pm_label())+
   ggtitle(expression(
@@ -38,7 +38,7 @@ ggplot(air_q_all.byday, aes(x = Date, y = RollingAvg))+
 
 #density plots comparing all year data to years in facet
 
-ggplot(air_q_all.byday, aes(x = RollingAvg))+
+ggplot(air_q_all.byday, aes(x = RollingAvgPollution))+
   geom_density(data = transform(air_q_all.byday, Year = NULL), 
                aes(colour = 'All Data'), bw = 'SJ')+
   geom_density(aes(colour = 'Year in Facet'), bw = 'SJ')+
@@ -50,7 +50,7 @@ ggplot(air_q_all.byday, aes(x = RollingAvg))+
 
 #violin plots comparing all data to months in facet
 
-ggplot(air_q_all.byday, aes(x = Month, y = RollingAvg))+
+ggplot(air_q_all.byday, aes(x = Month, y = RollingAvgPollution))+
   geom_violin(aes(group = Month),
               draw_quantiles = c(.25, .5, .75))+
   scale_y_continuous(trans = log_trans(2))+
