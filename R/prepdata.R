@@ -57,24 +57,24 @@ air_q_all <- subset(air_q_all, QC.Name != 'Missing') %>%
 #grouping by year, month, and day, calculate:
 #avg, median, 2.5% q, 97.5% q, 5% q, 95% q, sd
 
-air_q_all %>%
+air_q_all.byday <- air_q_all %>%
   group_by(Year, Month, Day, DayOfYear) %>%
   summarise(AvgPollution = mean(Value), 
             MedPollution = median(Value),
             SDPollution = sd(Value),
-            Max = max(Value),
-            Min = min(Value),
-            Lower95 = quantile(Value, .025),
-            Upper95 = quantile(Value, .975),
-            Lower90 = quantile(Value, .05),
-            Upper90 = quantile(Value, .10),
-            Lower50 = quantile(Value, .25),
-            Upper50 = quantile(Value, .75),
+            MaxPollution = max(Value),
+            MinPollution = min(Value),
+            Lower95Pollution = quantile(Value, .025),
+            Upper95Pollution = quantile(Value, .975),
+            Lower90Pollution = quantile(Value, .05),
+            Upper90Pollution = quantile(Value, .10),
+            Lower50Pollution = quantile(Value, .25),
+            Upper50Pollution = quantile(Value, .75),
             Observations = n()) %>%
   ungroup() %>%
   mutate(Date = as.Date(paste0(Year, '-', Month, '-', Day))) %>%
   arrange(Date) %>%
-  mutate(RollingAvg = rollmean(AvgPollution, k = 7, fill = NA)) -> air_q_all.byday
+  mutate(RollingAvgPollution = rollmean(AvgPollution, k = 7, fill = NA))
 
 #grab weather data
 
@@ -138,14 +138,14 @@ air_q_all %>%
   summarise(AvgPollution = mean(Value), 
             MedPollution = median(Value),
             SDPollution = sd(Value),
-            Max = max(Value),
-            Min = min(Value),
-            Lower95 = quantile(Value, .025),
-            Upper95 = quantile(Value, .975),
-            Lower90 = quantile(Value, .05),
-            Upper90 = quantile(Value, .10),
-            Lower50 = quantile(Value, .25),
-            Upper50 = quantile(Value, .75),
+            MaxPollution = max(Value),
+            MinPollution = min(Value),
+            Lower95Pollution = quantile(Value, .025),
+            Upper95Pollution = quantile(Value, .975),
+            Lower90Pollution = quantile(Value, .05),
+            Upper90Pollution = quantile(Value, .10),
+            Lower50Pollution = quantile(Value, .25),
+            Upper50Pollution = quantile(Value, .75),
             Observations = n()) -> air_q_all.byweek
 
 
