@@ -148,6 +148,6 @@ air_q_all %>%
             Upper50Pollution = quantile(Value, .75),
             Observations = n()) -> air_q_all.byweek
 
- # write.csv(x = air_q_all.byday,
- #           file = 'Data/DailyBeijingAirData1116.csv',
- #           row.names = FALSE)
+write.csv(x = air_q_all.byday,
+            file = 'Data/DailyBeijingAirData1116.csv',
+            row.names = FALSE)
