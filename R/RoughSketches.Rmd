@@ -1,9 +1,17 @@
+---
+title: "Rough Sketch"
+author: "Brad Stieber"
+date: "March 5, 2017"
+output: pdf_document
+classoption: landscape
+---
+```{r echo = FALSE, warning=FALSE, message=FALSE}
 suppress <- TRUE
 
 if(suppress){
-  suppressPackageStartupMessages(source('R/prepdata.R'))  
+  suppressPackageStartupMessages(source('prepdata.R'))  
 }else{
-  source('R/prepdata.R')
+  source('prepdata.R')
 }
 
 
@@ -52,71 +60,11 @@ air_q_all.byday <- air_q_all.byday %>%
                                     'Fall','Winter')))
 
 
-#density plots comparing all year data to years in facet
+```
 
-ggplot(air_q_all.byday, aes(x = RollingAvgPollution))+
-  geom_density(data = transform(air_q_all.byday, Year = NULL), 
-               aes(colour = 'All Data'), bw = 'SJ')+
-  geom_density(aes(colour = 'Year in Facet'), bw = 'SJ')+
-  facet_wrap(~Year)+
-  xlab(pm_label(log2 = TRUE))+
-  scale_x_continuous(trans = log_trans(2))+
-  scale_colour_brewer(palette = 'Set1',
-                      name = 'Data Type')
+Sketch 1:
 
-#violin plots comparing all data to months in facet
-
-ggplot(air_q_all.byday, aes(x = Month, y = RollingAvgPollution))+
-  geom_violin(aes(group = Month),
-              draw_quantiles = c(.25, .5, .75))+
-  scale_y_continuous(trans = log_trans(2))+
-  facet_wrap(~Year)+
-  ylab(pm_label(log2 = T))+
-  scale_x_continuous(breaks = c(1,seq(3, 12, by = 3)))+
-  ggtitle(expression(paste(
-    'Violin Plots of ', PM[2.5], ' Concentration by Month'
-  )))+
-  stat_summary(fun.y = 'mean', geom = 'point', size = 3, 
-               colour = 'dodgerblue3')
-
-
-# ggplot(air_q_all.byday, aes(x = RollingAvg))+
-#   geom_density(data = transform(air_q_all.byday, Month = NULL), 
-#                aes(colour = 'All Data'), bw = 'SJ')+
-#   geom_density(aes(colour = 'Month in Facet'), bw = 'SJ')+
-#   facet_wrap(~Month)+
-#   xlab(expression(paste('3 Day Rolling Average of  ',
-#                         PM[2.5],'  Concentration (',
-#                         log[2], ' scale)')))+
-#   scale_x_continuous(trans = log_trans(2))+
-#   scale_colour_brewer(palette = 'Set1',
-#                       name = 'Data Type')
-
-##look at wind speed now
-
-ggplot(air_q_all.byday, aes(x = MeanWindSpeedMPH, y = AvgPollution))+
-  geom_boxplot(aes(group = MeanWindSpeedMPH))+
-  geom_jitter(alpha = .1, colour = 'dodgerblue2')+
-  scale_y_continuous(trans = log_trans(2))+
-  facet_wrap(~Year)+
-  ylab(pm_label(log2 = TRUE))+
-  xlab('Average Daily Wind Speed (mph)')
-
-#create data.frame with error bar coordinates
-
-air_q_all.byday %>%
-  group_by(DayOfWeek, Season) %>%
-  summarise(Upper50Med = quantile(MedPollution, .75),
-            Lower50Med = quantile(MedPollution, .25),
-            Upper90Med = quantile(MedPollution, .95),
-            Lower90Med = quantile(AvgPollution, .05)) -> error_bar_sum
-
-merge(air_q_all.byday,
-      error_bar_sum,
-      by = c('DayOfWeek','Season')) %>%
-  filter(MedPollution >= Upper90Med |
-         MedPollution <= Lower90Med) -> jitter_sum
-
+```{r echo = FALSE, message = FALSE, warning=FALSE}
 #story 1
 # does it being a work week affect pollution?
 # 
@@ -128,16 +76,15 @@ ggplot(data = air_q_all.byday,
                alpha = .5)+
   geom_errorbar(data = error_bar_sum,
                 aes(x = DayOfWeek,
-                    ymin = Lower90Med,
-                    ymax = Upper90Med),
-                size = 1.2, colour = 'grey50',
-                inherit.aes = FALSE)+
-  geom_errorbar(data = error_bar_sum,
-                aes(x = DayOfWeek,
                     ymin = Lower50Med,
                     ymax = Upper50Med),
                 size = 1.2, inherit.aes = FALSE)+
-
+  geom_errorbar(data = error_bar_sum,
+                aes(x = DayOfWeek,
+                    ymin = Lower90Med,
+                    ymax = Upper90Med),
+                size = 1.2, linetype = 'dashed',
+                inherit.aes = FALSE)+
   stat_summary(fun.y = 'median', geom = 'point', colour = '#b70101',
                size = 4)+
   facet_wrap(~Season, nrow = 1)+
@@ -156,39 +103,12 @@ ggplot(data = air_q_all.byday,
   ggtitle('Median PM2.5 Concentration by Day of Week and Season',
           subtitle = 'Data for 2011 - 2016, y-axis is log-scaled')
 
-anova(
-  lm(I(log(MedPollution)) ~ Season * DayOfWeek, data = air_q_all.byday))
 
+```
 
-ggplot(data = air_q_all.byday,
-       aes(x = Season, y = MedPollution))+
-  geom_point(data = jitter_sum,
-             aes(x = Season, y = MedPollution),
-             pch = 1,
-             alpha = .5)+
-  geom_errorbar(data = error_bar_sum,
-                aes(x = Season,
-                    ymin = Lower50Med,
-                    ymax = Upper50Med),
-                size = 1.2, inherit.aes = FALSE)+
-  geom_errorbar(data = error_bar_sum,
-                aes(x = Season,
-                    ymin = Lower90Med,
-                    ymax = Upper90Med),
-                size = 1.2, linetype = 'dashed',
-                inherit.aes = FALSE)+
-  stat_summary(fun.y = 'mean', geom = 'point', colour = '#b70101',
-               size = 4)+
-  facet_wrap(~DayOfWeek, nrow = 1)+
-  scale_y_continuous(trans = log_trans(2),
-                     name = expression(paste('Median ', PM[2.5],
-                                             ' Concentration (',
-                                             log[2], ' scale)')))+
-  xlab('')
+Sketch 2
 
-
-
-
+```{r echo = FALSE, message = FALSE, warning=FALSE}
 #manually generate a paired scatter plot
 library(gridExtra)
 library(GGally)
@@ -362,97 +282,7 @@ xAxisLabels =
         legend.text = element_text(size = 12))
 
 
-#fit loess to get predictions
-
-l_2016 <- loess(MeanTemperatureF ~ DayOfYear, data = air_q_all.byday,
-      subset = Year == 2016, span = .4)
-
-l_2016.predict <- predict(l_2016, newdata = data.frame(DayOfYear = 1:365))
-
-l_11_15 <- loess(MeanTemperatureF ~ DayOfYear, data = air_q_all.byday,
-                 subset = Year != 2016, span = .4)
-
-l_11_15.predict <- predict(l_11_15, newdata = data.frame(DayOfYear = 1:365))
 
 
-p1 <- ggplot(air_q_all.byday, aes(x = DayOfYear, y = MeanTemperatureF, 
-                            colour = factor(Year)))+
-  scale_colour_manual(values = c('2011' = '#d9d9d9',
-                                 '2012' = '#bdbdbd',
-                                 '2013' = '#969696',
-                                 '2014' = '#737373',
-                                 '2015' = '#525252',
-                                 '2016' = 'red'),
-                      name = 'Year')+
-  stat_smooth(se = FALSE, span = .4, method = 'loess', 
-              n = 200, size = 1.2)+
-  scale_x_continuous(
-    breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
-    labels = month.abb,
-    name = 'Date'
-  )+
-  scale_y_continuous(limits = c(0, 90),
-                     name = 'Temperature (F)')+
-  guides(colour = guide_legend(nrow = 1))+theme(legend.position = 'top')+
-  ggtitle('Smoothed Line Plots for Daily Average Temperature by Year',
-          subtitle = 'Smoothed lines created using loess (alpha = 0.4)')+
-  theme(legend.spacing = unit(0.1, 'lines'))
+```
 
-
-
-
-p2 <- ggplot()+
-  geom_smooth(data = subset(air_q_all.byday, Year == 2016),
-              aes(x = DayOfYear, y = MeanTemperatureF,
-                  colour = '2016', fill = '2016'),
-              span = .4, method = 'loess',
-              level = .99, size = 1.2,
-              n = 200, alpha = .3)+
-  geom_smooth(data = subset(air_q_all.byday, Year != 2016),
-              aes(x = DayOfYear, y = MeanTemperatureF,
-                  colour = '2011-2015', fill = '2011-2015'),
-              span = .4, method = 'loess',
-              level = .99, size = 1.2,
-              n = 200, alpha = .3)+
-  scale_colour_manual(values = c('2016' = '#E41A1C',
-                               '2011-2015' = '#377EB8'),
-                    name = 'Year Group')+
-  scale_fill_manual(values = c('2016' = '#E41A1C',
-                               '2011-2015' = '#377EB8'),
-                    name = 'Year Group')+
-  scale_x_continuous(
-    breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
-    labels = month.abb,
-    name = 'Date'
-  )+
-  scale_y_continuous(limits = c(0, 90),
-                     name = 'Temperature (F)')+
-  guides(colour = guide_legend(nrow = 1),
-         fill = guide_legend(nrow = 1))+theme(legend.position = 'top')+
-  ggtitle('Smoothed Line Plots for Daily Average Temperature by Year Group',
-          subtitle = paste('There were',
-                           sum(l_2016.predict > l_11_15.predict),
-                           'days where 2016 predicted values were higher than',
-                           'those predicted for the 2011-2015 trend'))
-
-air_q_all.byday %>%
-  group_by(Year, Season) %>%
-  summarise(`Temperature (F)` = mean(MeanTemperatureF),
-            `Pollution (PM2.5)` = mean(AvgPollution),
-            `Humidity (%)` = mean(MeanHumidity),
-            `Wind Speed (MPH)` = mean(MeanWindSpeedMPH)) -> par_coord_air
-
-
-library(MASS)
-parcoord(par_coord_air[,c(3:6)], 
-         col = dput(brewer_pal(palette = 'Set1')(4))[par_coord_air$Season], 
-         var.label = TRUE, ylim = c(0, 1.2), lwd = 2,
-         main = NULL)
-title(main = 'Parallel Coordinates Plot of Seasonal Averages', adj = 0)
-mtext(side = 3, line = 0, adj = 0,
-      text = 'Each line represents the average of the daily values for each season for a given year')
-
-legend('topleft', c('Spring','Summer','Fall','Winter'),
-       col = brewer_pal(palette = 'Set1')(4),
-       lty = 1, lwd = 4, ncol = 4, bty = 'n')
-   

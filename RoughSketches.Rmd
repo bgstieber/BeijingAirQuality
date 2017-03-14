@@ -1,0 +1,690 @@
+---
+title: "CS 765 Rough Sketches"
+author: "Brad Stieber"
+output: pdf_document
+classoption: landscape
+---
+# \pagenumbering{gobble}
+```{r echo = FALSE, warning=FALSE, message=FALSE}
+suppress <- TRUE
+
+if(suppress){
+  suppressPackageStartupMessages(source('R/prepdata.R'))  
+}else{
+  source('R/prepdata.R')
+}
+
+
+
+pm_label <- function(log2 = FALSE){
+  if(log2){
+    expression(paste('3 Day Rolling Average of  ',
+                     PM[2.5],'  Concentration (',
+                     log[2], ' scale)'))
+  }else{
+    expression(paste('3 Day Rolling Average of  ',
+                     PM[2.5],'  Concentration'))
+  }
+}
+
+
+# add weekday and season to data
+air_q_all.byday <- air_q_all.byday %>%
+  mutate(DayOfWeek = weekdays(Date),
+         Season = ifelse(Month %in% c(12,1,2), 'Winter',
+                         ifelse(Month %in% 3:5, 'Spring',
+                                ifelse(Month %in% 6:8, 'Summer','Fall')))
+         ) %>%
+  mutate(DayOfWeek = factor(DayOfWeek, 
+                            levels = c('Saturday','Sunday',
+                                       'Monday','Tuesday',
+                                       'Wednesday','Thursday',
+                                       'Friday')),
+         Season = factor(Season,
+                         levels = c('Spring','Summer',
+                                    'Fall','Winter')))
+
+theme_set(theme_bw()+theme(panel.grid.minor = element_blank()))
+
+#make multi plotting easier
+#http://stackoverflow.com/a/24962413/5619526
+lay_out = function(...) {    
+  x <- list(...)
+  n <- max(sapply(x, function(x) max(x[[2]])))
+  p <- max(sapply(x, function(x) max(x[[3]])))
+  grid::pushViewport(grid::viewport(layout = grid::grid.layout(n, p)))    
+  
+  for (i in seq_len(length(x))) {
+    print(x[[i]][[1]], vp = grid::viewport(layout.pos.row = x[[i]][[2]], 
+                                           layout.pos.col = x[[i]][[3]]))
+  }
+} 
+```
+
+\newpage 
+
+```{r echo = FALSE, message = FALSE, warning=FALSE, fig.width=9, fig.height = 4.5, fig.align='center'}
+#story 1
+# does it being a work week affect pollution?
+
+air_q_all.byday %>%
+  group_by(DayOfWeek, Season) %>%
+  summarise(Upper50Med = quantile(MedPollution, .75),
+            Lower50Med = quantile(MedPollution, .25),
+            Upper90Med = quantile(MedPollution, .95),
+            Lower90Med = quantile(AvgPollution, .05)) -> error_bar_sum
+
+merge(air_q_all.byday,
+      error_bar_sum,
+      by = c('DayOfWeek','Season')) %>%
+  filter(MedPollution >= Upper90Med |
+         MedPollution <= Lower90Med) -> jitter_sum
+# 
+main_plot <- ggplot(data = air_q_all.byday,
+       aes(x = DayOfWeek, y = MedPollution))+
+  geom_point(data = jitter_sum,
+             aes(x = DayOfWeek, y = MedPollution),
+             pch = 1,
+             alpha = .5)+
+  geom_errorbar(data = error_bar_sum,
+                aes(x = DayOfWeek,
+                    ymin = Lower90Med,
+                    ymax = Upper90Med),
+                size = 1.2, colour = 'grey50',
+                inherit.aes = FALSE)+
+  geom_errorbar(data = error_bar_sum,
+                aes(x = DayOfWeek,
+                    ymin = Lower50Med,
+                    ymax = Upper50Med),
+                size = 1.2, inherit.aes = FALSE, width = .5)+
+  stat_summary(fun.y = 'median', geom = 'point', colour = '#b70101',
+               size = 4)+
+  facet_wrap(~Season, nrow = 1)+
+  scale_y_continuous(trans = log_trans(2),
+                     name = expression(paste('Median ', PM[2.5],
+                                             ' Concentration (',
+                                             log[2], ' scale)')))+
+  xlab('')+
+  theme(plot.subtitle = element_text(size = 8))+
+  scale_x_discrete(labels = c('Sunday' = 'Su',
+                              'Monday' = 'Mo',
+                              'Tuesday' = 'Tu',
+                              'Wednesday' = 'We',
+                              'Thursday' = 'Th',
+                              'Friday' = 'Fr',
+                              'Saturday' = 'Sa'))+
+  ggtitle('Daily Median PM2.5 Concentration by Day of Week and Season',
+          subtitle = 'Data for 2011 - 2016, y-axis is log-scaled. Black error bars: 25th-75th percentiles; Grey error bars: 5th-95th percentiles')
+
+text_data <- data.frame(
+  y = c(.1, .25, .5, .9, 1.5, 1.75, 1.9),
+  x = rep(.6, 7),
+  label = c('Lower Outliers', '5th percentile',
+            '25th percentile','Median',
+            '75th percentile','95th percentile', 'Upper Outliers'),
+  stringsAsFactors = FALSE
+)
+
+set.seed(1848)
+sample_plot <- ggplot(data = NULL)+
+  geom_errorbar(aes(x = 0, ymin = .25, ymax = 1.75), size = 1.2, colour = 'grey50')+
+  geom_errorbar(aes(x = 0, ymin = .5, ymax = 1.5), size = 1.2, width = .5)+
+  geom_point(aes(x = 0, y = .9), colour = '#b70101', size = 4)+
+  geom_point(data = data.frame(x = rep(0, 10),
+                               y = c(runif(5, 1.8, 2), runif(5, 0, .2))),
+             aes(x = x, y = y), pch = 1, alpha = .5)+
+  xlim(c(-.5, 2.5))+
+  theme(text = element_blank(),
+        axis.ticks = element_blank())
+
+sample_plot <- sample_plot + 
+  geom_text(data = text_data, aes(x = x, y = y, label = label),
+            hjust = 'left', size = 2.5)+
+    ylim(c(-1, 3))+
+    theme(panel.grid = element_blank(),
+          panel.border = element_blank())
+
+lay_out(list(main_plot, 1, 1:5), list(sample_plot, 1, 6))
+
+
+```
+
+__Data__ Daily median pollution levels (higher indicates more pollution) for 2011 - 2016 by day of week and season
+
+Plot of daily median $PM_{2.5}$ concentration levels (measure of pollution) by day of week and season. __Red dots are the overall medians, black error bars represent 25 - 75th percentile range, and grey error bars represent 5 - 95th percentile range.__ Outlier points are those that fall above or below the 5 - 95th percentile range. The y-axis is $log_2$ scaled.
+
+We were originally trying to compare pollution levels by weekday / weekend. We were interested in investigating whether pollution levels were elevated during the work week. Instead, we found that although the levels remain fairly flat between seasons and day of week, the variation in pollution levels tends to increase in the Fall and Winter. Note that the error bars tend to be longer in the Fall and Winter than those in the Spring or Summer. The lengthening of error bars indicates differences in seasonal variability.
+
+\newpage
+
+```{r echo = FALSE, message = FALSE, warning=FALSE, fig.width = 9.5,fig.height=5,fig.align='center'}
+#manually generate a paired scatter plot
+# library(gridExtra)
+# library(GGally)
+# 
+# air_q_all.byday2 <- air_q_all.byday %>%
+#   group_by(Season, DayOfYear) %>%
+#     summarise(MeanPollution = mean(AvgPollution),
+#               MeanHumidity = mean(MeanHumidity),
+#               MeanTemperatureF = mean(MeanTemperatureF),
+#               MeanWindSpeedMPH = mean(MeanWindSpeedMPH))
+#   
+# 
+# cor_table <- air_q_all.byday %>%
+#   group_by(Season) %>%
+#   summarise(CorPolHum = cor(log2(RollingAvgPollution), MeanHumid_RollingAvg,
+#                             use = 'pairwise'),
+#             CorPolWS = cor(log2(RollingAvgPollution), log2(MeanWindSpeed_RollingAvg),
+#                            use = 'pairwise'),
+#             CorPolTemp = cor(log2(RollingAvgPollution), MeanTempF_RollingAvg,
+#                              use = 'pairwise'))
+# 
+# p02 <- ggplot(cor_table,
+#               aes(x = 1, y = Season, 
+#                   label = 
+#                     paste0(Season, ': ', round(CorPolHum,2))))+
+#   geom_text(aes(colour = Season), size = 5)+
+#   # geom_text(aes(x = 1, y = 4.25, 
+#   #               label = 'Correlations between\nlog2(Pollution) and Humidity:'), 
+#   #           size = 4, inherit.aes = FALSE)+
+#   scale_colour_brewer(palette = 'Set1')+
+#   theme(axis.ticks = element_blank(),
+#         axis.text = element_blank(),
+#         panel.grid = element_blank())
+# 
+# p03 <- ggplot(cor_table,
+#               aes(x = 1, y = Season, 
+#                   label = 
+#                     paste0(Season, ': ', round(CorPolWS,2))))+
+#   geom_text(aes(colour = Season), size = 5)+
+#   # geom_text(aes(x = 1, y = 4.25, 
+#   #               label = 'Correlations between log2(Pollution) and log2(Wind Speed):'), 
+#   #           size = 6, inherit.aes = FALSE)+
+#   scale_colour_brewer(palette = 'Set1')+
+#   theme(axis.ticks = element_blank(),
+#         axis.text = element_blank(),
+#         panel.grid = element_blank())
+# 
+# p04 <- ggplot(cor_table,
+#               aes(x = 1, y = Season, 
+#                   label = 
+#                     paste0(Season, ': ', round(CorPolTemp,2))))+
+#   geom_text(aes(colour = Season), size = 5)+
+#   # geom_text(aes(x = 1, y = 4.25, 
+#   #               label = 'Correlations between log2(Pollution) and Temperature:'), 
+#   #           size = 6, inherit.aes = FALSE)+
+#   scale_colour_brewer(palette = 'Set1')+
+#   theme(axis.ticks = element_blank(),
+#         axis.text = element_blank(),
+#         panel.grid = element_blank())
+# 
+# #histogram
+# p01 <- ggplot(air_q_all.byday, aes(x = RollingAvgPollution))+
+#   geom_density(fill = 'grey60', colour = 'black',
+#                bw = 'SJ')+
+#   scale_x_continuous(trans = log_trans(2))+
+#   theme(axis.text = element_blank(),
+#         axis.ticks = element_blank())
+# 
+# p12 <- ggplot(air_q_all.byday, aes(x = MeanHumid_RollingAvg))+
+#   geom_density(bw = 'SJ', fill = 'grey60', colour = 'black')
+# 
+# p23 <- ggplot(air_q_all.byday, aes(x = MeanWindSpeed_RollingAvg))+
+#   geom_density(bw = 'SJ', fill = 'grey60', colour = 'black')+
+#   scale_x_continuous(trans = log_trans(2))
+# 
+# p34 <- ggplot(air_q_all.byday, aes(x = MeanTempF_RollingAvg))+
+#   geom_density(bw = 'SJ',fill = 'grey60', colour = 'black')+
+#   scale_x_continuous(labels = function(x) paste0(x,  "�"))
+# 
+# 
+# #pollution on x axis (column 1, rows 1-3)
+# p11 <- ggplot(air_q_all.byday, aes(x = RollingAvgPollution, y = MeanHumid_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))+
+#   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1, pch = 15)))+
+#   scale_y_continuous(labels = function(x) paste0(x, '%'))
+# 
+# p21  <- ggplot(air_q_all.byday, aes(x = RollingAvgPollution, 
+#                                     y = MeanWindSpeed_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))+
+#   scale_y_continuous(trans = log_trans(2))
+# 
+# p31 <- ggplot(air_q_all.byday, aes(x = RollingAvgPollution, y = MeanTempF_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))+
+#   scale_y_continuous(labels = function(x) paste0(x,  "�"))
+# 
+# 
+# #humidity on x axis, (column 2, rows0, 2, 3)
+# 
+# # p02 <- ggplot(air_q_all.byday, aes(y = RollingAvgPollution, x = MeanHumid_RollingAvg))+
+# #   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+# #   scale_color_brewer(palette = 'Set1')+
+# #   scale_y_continuous(trans = log_trans(2))+
+# #   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1, pch = 15)))
+# 
+# p22 <- ggplot(air_q_all.byday, aes(x = MeanHumid_RollingAvg, 
+#                                    y = MeanWindSpeed_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_y_continuous(trans = log_trans(2))
+# 
+# 
+# p32 <- ggplot(air_q_all.byday, aes(x = MeanHumid_RollingAvg, y = MeanTempF_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(labels = function(x) paste0(x, '%'))
+# 
+# 
+# # wind speed on x axis(column 3, rows 0,1,3)
+# 
+# # p03 <- ggplot(air_q_all.byday, aes(y = RollingAvgPollution, 
+# #                                    x = MeanWindSpeed_RollingAvg))+
+# #   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+# #   scale_color_brewer(palette = 'Set1')+
+# #   scale_x_continuous(trans = log_trans(2))+
+# #   scale_y_continuous(trans = log_trans(2))
+# 
+# p13 <- ggplot(air_q_all.byday, aes(x = MeanWindSpeed_RollingAvg, 
+#                                    y = MeanHumid_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))
+# 
+# p33 <- ggplot(air_q_all.byday, aes(x = MeanWindSpeed_RollingAvg, 
+#                                    y = MeanTempF_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))
+# 
+# #temp on x axis (column 4, rows 0 - 3)
+# 
+# # p04 <- ggplot(air_q_all.byday, aes(y = RollingAvgPollution, 
+# #                                    x = MeanTempF_RollingAvg))+
+# #   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+# #   scale_color_brewer(palette = 'Set1')+
+# #   scale_y_continuous(trans = log_trans(2))
+# # 
+# 
+# 
+# p14 <- ggplot(air_q_all.byday, aes(y = MeanHumid_RollingAvg, 
+#                                    x = MeanTempF_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')
+# 
+# p24 <- ggplot(air_q_all.byday, aes(y = MeanWindSpeed_RollingAvg, x = MeanTempF_RollingAvg))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_y_continuous(trans = log_trans(2))
+# 
+# 
+# ggmatrix(list(
+#     p01,
+#     # p02, NULL, NULL,
+#     p02, p03, p04,
+#     p11, p12, p13, p14,
+#     p21, p22, p23, p24,
+#     p31, p32, p33, p34
+# ), nrow = 4, ncol = 4, legend = c(2,1), showStrips = TRUE,
+# xAxisLabels =
+#     c('Pollution [PM2.5] (log base 2)',
+#       'Humidiity [%]',
+#       'Wind Speed [MPH] (log base 2)',
+#       'Temperature [F]'
+#     ),
+# yAxisLabels = 
+#     c('Pollution',
+#       'Humidity',
+#       'Wind Speed',
+#       'Temperature'
+#     ))+
+#     theme(legend.position = 'top',
+#           legend.title = element_text(size = 14),
+#           legend.text = element_text(size = 12),
+#           legend.margin = unit(0, 'lines'))
+library(gridExtra)
+library(GGally)
+
+air_q_all.byday2 <- air_q_all.byday %>%
+  group_by(Season, Month, Day) %>%
+  summarise(MeanPollution = mean(AvgPollution),
+            MeanHumidity = mean(MeanHumidity),
+            MeanTemperatureF = mean(MeanTemperatureF),
+            MeanWindSpeedMPH = mean(MeanWindSpeedMPH),
+            CountObs = n()) %>%
+  filter(CountObs >= 4) #exclude leap year data
+
+
+cor_table <- air_q_all.byday2 %>%
+  group_by(Season) %>%
+  summarise(CorPolHum = cor(log2(MeanPollution), MeanHumidity,
+                            use = 'pairwise'),
+            CorPolWS = cor(log2(MeanPollution), log2(MeanWindSpeedMPH),
+                           use = 'pairwise'),
+            CorPolTemp = cor(log2(MeanPollution), MeanTemperatureF,
+                             use = 'pairwise'))
+
+p02 <- ggplot(cor_table,
+              aes(x = 1, y = Season, 
+                  label = 
+                    paste0(Season, ': ', round(CorPolHum,2))))+
+  geom_text(aes(colour = Season), size = 5)+
+  # geom_text(aes(x = 1, y = 4.25, 
+  #               label = 'Correlations between\nlog2(Pollution) and Humidity:'), 
+  #           size = 4, inherit.aes = FALSE)+
+  scale_colour_brewer(palette = 'Set1')+
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank())
+
+p03 <- ggplot(cor_table,
+              aes(x = 1, y = Season, 
+                  label = 
+                    paste0(Season, ': ', round(CorPolWS,2))))+
+  geom_text(aes(colour = Season), size = 5)+
+  # geom_text(aes(x = 1, y = 4.25, 
+  #               label = 'Correlations between log2(Pollution) and log2(Wind Speed):'), 
+  #           size = 6, inherit.aes = FALSE)+
+  scale_colour_brewer(palette = 'Set1')+
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank())
+
+p04 <- ggplot(cor_table,
+              aes(x = 1, y = Season, 
+                  label = 
+                    paste0(Season, ': ', round(CorPolTemp,2))))+
+  geom_text(aes(colour = Season), size = 5)+
+  # geom_text(aes(x = 1, y = 4.25, 
+  #               label = 'Correlations between log2(Pollution) and Temperature:'), 
+  #           size = 6, inherit.aes = FALSE)+
+  scale_colour_brewer(palette = 'Set1')+
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank())
+
+#histogram
+p01 <- ggplot(air_q_all.byday2, aes(x = MeanPollution))+
+  geom_density(fill = 'grey60', colour = 'black',
+               bw = 'SJ')+
+  scale_x_continuous(trans = log_trans(2))+
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+p12 <- ggplot(air_q_all.byday2, aes(x = MeanHumidity))+
+  geom_density(bw = 'SJ', fill = 'grey60', colour = 'black')
+
+p23 <- ggplot(air_q_all.byday2, aes(x = MeanWindSpeedMPH))+
+  geom_density(bw = 'SJ', fill = 'grey60', colour = 'black')+
+  scale_x_continuous(trans = log_trans(2))
+
+p34 <- ggplot(air_q_all.byday2, aes(x = MeanTemperatureF))+
+  geom_density(bw = 'SJ',fill = 'grey60', colour = 'black')+
+  scale_x_continuous(labels = function(x) paste0(x,  "�"))
+
+
+#pollution on x axis (column 1, rows 1-3)
+p11 <- ggplot(air_q_all.byday2, aes(x = MeanPollution, y = MeanHumidity))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(trans = log_trans(2))+
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1, pch = 15)))+
+  scale_y_continuous(labels = function(x) paste0(x, '%'))
+
+p21  <- ggplot(air_q_all.byday2, aes(x = MeanPollution, 
+                                    y = MeanWindSpeedMPH))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(trans = log_trans(2))+
+  scale_y_continuous(trans = log_trans(2))
+
+p31 <- ggplot(air_q_all.byday2, aes(x = MeanPollution, y = MeanTemperatureF))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(trans = log_trans(2))+
+  scale_y_continuous(labels = function(x) paste0(x,  "�"))
+
+
+#humidity on x axis, (column 2, rows0, 2, 3)
+
+# p02 <- ggplot(air_q_all.byday2, aes(y = MeanPollution, x = MeanHumidity))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_y_continuous(trans = log_trans(2))+
+#   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1, pch = 15)))
+
+p22 <- ggplot(air_q_all.byday2, aes(x = MeanHumidity, 
+                                   y = MeanWindSpeedMPH))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_y_continuous(trans = log_trans(2))
+
+
+p32 <- ggplot(air_q_all.byday2, aes(x = MeanHumidity, y = MeanTemperatureF))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(labels = function(x) paste0(x, '%'))
+
+
+# wind speed on x axis(column 3, rows 0,1,3)
+
+# p03 <- ggplot(air_q_all.byday2, aes(y = MeanPollution, 
+#                                    x = MeanWindSpeedMPH))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_x_continuous(trans = log_trans(2))+
+#   scale_y_continuous(trans = log_trans(2))
+
+p13 <- ggplot(air_q_all.byday2, aes(x = MeanWindSpeedMPH, 
+                                   y = MeanHumidity))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(trans = log_trans(2))
+
+p33 <- ggplot(air_q_all.byday2, aes(x = MeanWindSpeedMPH, 
+                                   y = MeanTemperatureF))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_x_continuous(trans = log_trans(2))
+
+#temp on x axis (column 4, rows 0 - 3)
+
+# p04 <- ggplot(air_q_all.byday2, aes(y = MeanPollution, 
+#                                    x = MeanTemperatureF))+
+#   geom_point(aes(colour = Season), pch = 1, alpha = .8)+
+#   scale_color_brewer(palette = 'Set1')+
+#   scale_y_continuous(trans = log_trans(2))
+# 
+
+
+p14 <- ggplot(air_q_all.byday2, aes(y = MeanHumidity, 
+                                   x = MeanTemperatureF))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')
+
+p24 <- ggplot(air_q_all.byday2, aes(y = MeanWindSpeedMPH, x = MeanTemperatureF))+
+  geom_point(aes(colour = Season), pch = 1, alpha = .7)+
+  scale_color_brewer(palette = 'Set1')+
+  scale_y_continuous(trans = log_trans(2))
+
+
+ggmatrix(list(
+  p01,
+  # p02, NULL, NULL,
+  p02, p03, p04,
+  p11, p12, p13, p14,
+  p21, p22, p23, p24,
+  p31, p32, p33, p34
+), nrow = 4, ncol = 4, legend = c(2,1), showStrips = TRUE,
+xAxisLabels =
+  c('Pollution [PM2.5] (log base 2)',
+    'Humidiity [%]',
+    'Wind Speed [MPH] (log base 2)',
+    'Temperature [F]'
+  ),
+yAxisLabels = 
+  c('Pollution',
+    'Humidity',
+    'Wind Speed',
+    'Temperature'
+  ))+
+  theme(legend.position = 'top',
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.margin = unit(0, 'lines'))
+
+
+
+
+```
+
+__Data__ Average of the daily averages for pollution (higher values indicate more pollution), humidity, wind speed, and temperature for 2011 - 2016.
+
+What relationships exist between pollution, humidity, wind speed, and temperature? Do these relationships vary depending on season? What do the distributions of these values look like? This visualization allows for many distinct queries into the complex relationships between season and our quantitative metrics.
+
+We display a scatter plot matrix investigating pollution, humidity, wind speed, and temperature. Points are colored according to the season. Each value displayed is the average of the 2011-2016 daily averages. We choose a relatively high level of aggregation to avoid over-plotting. There should be approximately 365 marks on each scatter plot. We also display the correlations for each season between $log_2$ pollution and humidity, $log_2$ wind speed, and temperature. The axes for pollution and wind speed are $log_2$ scaled.
+
+\newpage
+
+__Alternative Encoding of SPLOM__
+
+```{r echo = FALSE, message = FALSE, warning=FALSE, fig.width = 9,fig.height=4.5,fig.align='center'}
+air_q_all.byday %>%
+  group_by(Year, Season) %>%
+  summarise(`Temperature (F)` = mean(MeanTemperatureF),
+            `Pollution (PM2.5)` = mean(AvgPollution),
+            `Humidity (%)` = mean(MeanHumidity),
+            `Wind Speed (MPH)` = mean(MeanWindSpeedMPH)) -> par_coord_air
+
+
+
+library(MASS)
+parcoord(par_coord_air[,c(3:6)], 
+         col = brewer_pal(palette = 'Set1')(4)[par_coord_air$Season], 
+         var.label = TRUE, ylim = c(-.05, 1.2), lwd = 2,
+         main = NULL)
+title(main = 'Parallel Coordinates Plot of Seasonal Averages', adj = 0)
+mtext(side = 3, line = 0, adj = 0,
+      text = 'Each line represents the average of the daily values for a season for a given year')
+
+legend('top', c('Spring','Summer','Fall','Winter'),
+       col = brewer_pal(palette = 'Set1')(4),
+       lty = 1, lwd = 4, ncol = 4, bty = 'n')
+   
+```
+
+__Data__ Averages of daily averages for pollution (higher values indicate more pollution), humidity, wind speed, and temperature for 2011 - 2016, by year and season.
+
+What relationships exist between pollution, humidity, wind speed, and temperature? Do these relationships vary depending on season? What do the distributions of these values look like?
+
+Parallel coordinates plot investigating pollution, humidity, wind speed, and temperature. Lines are colored according to the season. Each line represents the average of the daily values for each season for each year. Though less dense than the scatter plot matrix, we are still able to ascertain some of the relationships between our quantitative metrics. 
+
+\newpage
+
+```{r echo = FALSE, message = FALSE, warning=FALSE, fig.width=10, fig.height = 5, fig.align='center'}
+
+l_2016 <- loess(MeanTemperatureF ~ DayOfYear, data = air_q_all.byday,
+      subset = Year == 2016, span = .4)
+
+l_2016.predict <- predict(l_2016, newdata = data.frame(DayOfYear = 1:365))
+
+l_11_15 <- loess(MeanTemperatureF ~ DayOfYear, data = air_q_all.byday,
+                 subset = Year != 2016, span = .4)
+
+l_11_15.predict <- predict(l_11_15, newdata = data.frame(DayOfYear = 1:365))
+
+
+p1 <- ggplot(air_q_all.byday, aes(x = DayOfYear, y = MeanTemperatureF, 
+                            colour = factor(Year)))+
+  geom_point(alpha = .1)+
+  scale_colour_manual(values = c('2011' = '#d9d9d9',
+                                 '2012' = '#bdbdbd',
+                                 '2013' = '#969696',
+                                 '2014' = '#737373',
+                                 '2015' = '#525252',
+                                 '2016' = 'red'),
+                      name = 'Year')+
+  stat_smooth(se = FALSE, span = .4, method = 'loess', 
+              n = 200, size = 1)+
+  scale_x_continuous(
+    breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
+    labels = month.abb,
+    name = 'Date'
+  )+
+  theme(plot.title = element_text(size = 10),
+        plot.subtitle = element_text(size = 8),
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 8),
+        legend.spacing = unit(.1, 'lines'),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8))+
+  scale_y_continuous(limits = c(0, 90),
+                     name = 'Temperature (F)')+
+  guides(colour = guide_legend(nrow = 1))+theme(legend.position = 'top')+
+  ggtitle('Smoothed Line Plots for Daily Average Temperature by Year',
+          subtitle = 'Smoothed lines created using loess (alpha = 0.4)')+
+  theme(legend.spacing = unit(0.1, 'lines'))
+
+
+
+
+p2 <- ggplot()+
+  geom_point(data = subset(air_q_all.byday, Year != 2016),
+              aes(x = DayOfYear, y = MeanTemperatureF,
+                  colour = '2011-2015', fill = '2011-2015'),
+              alpha = .1)+
+  geom_point(data = subset(air_q_all.byday, Year == 2016),
+              aes(x = DayOfYear, y = MeanTemperatureF,
+                  colour = '2016', fill = '2016'),
+              alpha = .1)+
+      geom_smooth(data = subset(air_q_all.byday, Year == 2016),
+              aes(x = DayOfYear, y = MeanTemperatureF,
+                  colour = '2016', fill = '2016'),
+              span = .4, method = 'loess',
+              level = .99, size = 1,
+              n = 200, alpha = .4)+
+  geom_smooth(data = subset(air_q_all.byday, Year != 2016),
+              aes(x = DayOfYear, y = MeanTemperatureF,
+                  colour = '2011-2015', fill = '2011-2015'),
+              span = .4, method = 'loess',
+              level = .99, size = 1,
+              n = 200, alpha = .4)+
+  scale_colour_manual(values = c('2016' = '#E41A1C',
+                               '2011-2015' = '#377EB8'),
+                    name = 'Year Group')+
+  scale_fill_manual(values = c('2016' = '#E41A1C',
+                               '2011-2015' = '#377EB8'),
+                    name = 'Year Group')+
+  scale_x_continuous(
+    breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
+    labels = month.abb,
+    name = 'Date'
+  )+
+  theme(plot.title = element_text(size = 10),
+        plot.subtitle = element_text(size = 8),
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 8),
+        legend.spacing = unit(.1, 'lines'),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8))+
+  scale_y_continuous(limits = c(0, 90),
+                     name = 'Temperature (F)')+
+  guides(colour = guide_legend(nrow = 1),
+         fill = guide_legend(nrow = 1))+theme(legend.position = 'top')+
+  ggtitle('Smoothed Line Plots for Daily Average Temperature by Year Group',
+          subtitle = 'Shaded areas represent 99% Confidence Intervals')
+
+grid.arrange(p1, p2, nrow = 1)
+```
+
+__Data__ Daily average temperatures for 2011 - 2016 by day of year
+
+Climate change is a major concern for many people. Even though our time frame is too short to make any clear scientific judgments, we investigate the temperature trends for 2016 versus previous years to look for signs of warming. We choose to emphasize the smoothed curves rather than the actual data to avoid spurious observations from variability in the daily data.
+
+We display a two panel graph which utilizes a `loess` fitting method to smooth out the variability in daily average temperature data. Our left panel compares the smoothed trend for the previous years (varying shades of gray) to the smoothed trend from 2016 (red line). We color the 2016 line red to make it pop-out in the display. The right panel compares the smoothed trend for a model fit on 2011-2015 data versus a model fit on the 2016 data. The prediction from the smoothed trend for 2016 was higher than the year group trend on `r paste0(sum(l_2016.predict > l_11_15.predict), ' (', scales::percent(mean(l_2016.predict > l_11_15.predict)), ')')` days. In the left panel, we display the predictions with no confidence intervals, in the right panel we display the predictions as well as 99% confidence intervals. 
+

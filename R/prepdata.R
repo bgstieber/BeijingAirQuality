@@ -105,6 +105,10 @@ air_q_all.byday <- air_q_all.byday %>%
   arrange(Date) %>%
   mutate(MeanTempF_RollingAvg = rollmean(MeanTemperatureF,
                                          k = 7, fill = NA),
+         MinTempF_RollingAvg = rollmean(MinTemperatureF,
+                                         k = 7, fill = NA),
+         MaxTempF_RollingAvg = rollmean(MaxTemperatureF,
+                                         k = 7, fill = NA),
          MeanHumid_RollingAvg = rollmean(MeanHumidity,
                                          k = 7, fill = NA),
          MeanWindSpeed_RollingAvg = rollmean(MeanWindSpeedMPH,
