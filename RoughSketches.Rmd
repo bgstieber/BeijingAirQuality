@@ -1,7 +1,9 @@
 ---
 title: "CS 765 Rough Sketches"
 author: "Brad Stieber"
-output: pdf_document
+output: 
+  pdf_document: 
+    keep_tex: yes
 classoption: landscape
 ---
 # \pagenumbering{gobble}
@@ -687,4 +689,9 @@ __Data__ Daily average temperatures for 2011 - 2016 by day of year
 Climate change is a major concern for many people. Even though our time frame is too short to make any clear scientific judgments, we investigate the temperature trends for 2016 versus previous years to look for signs of warming. We choose to emphasize the smoothed curves rather than the actual data to avoid spurious observations from variability in the daily data.
 
 We display a two panel graph which utilizes a `loess` fitting method to smooth out the variability in daily average temperature data. Our left panel compares the smoothed trend for the previous years (varying shades of gray) to the smoothed trend from 2016 (red line). We color the 2016 line red to make it pop-out in the display. The right panel compares the smoothed trend for a model fit on 2011-2015 data versus a model fit on the 2016 data. The prediction from the smoothed trend for 2016 was higher than the year group trend on `r paste0(sum(l_2016.predict > l_11_15.predict), ' (', scales::percent(mean(l_2016.predict > l_11_15.predict)), ')')` days. In the left panel, we display the predictions with no confidence intervals, in the right panel we display the predictions as well as 99% confidence intervals. 
+
+```{r}
+power.prop.test(p1 = 0.001, p2 = 0.0011, 
+                sig.level = .05, power = .95, alternative = 'one.sided')
+```
 
